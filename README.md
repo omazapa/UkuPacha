@@ -1,2 +1,2 @@
-# Uku Pacha / Mundo de abajo y de los muertos, sin ser precisamente el infierno.
+# Uku Pacha
 SQL to Json package 
