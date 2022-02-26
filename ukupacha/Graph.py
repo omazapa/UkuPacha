@@ -224,8 +224,8 @@ class UkuPachaGraph:
         Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
             dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections) for i, row in data.iterrows())
 
-    def save_json(output_file, data):
-        with open(output_file+".regs.json", 'w') as fp:
+    def save_json(self,output_file, data):
+        with open(output_file, 'w') as fp:
             json.dump(data, fp, cls=JsonEncoder, indent=4)
 
     def run2file(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False):
