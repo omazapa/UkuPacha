@@ -1,4 +1,5 @@
 import cx_Oracle
+from pymongo import MongoClient
 import pandas as pd
 from ukupacha.Utils import Utils
 from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder
@@ -146,7 +147,7 @@ class UkuPachaGraph:
                 output.update(out)
         return output
 
-    def parse_subsection(self, regs, graph_fields):
+    def parse_subsections(self, regs, graph_fields):
         sub_section = {}
         for i in graph_fields.keys():
             alias = graph_fields[i]["alias"]
@@ -167,6 +168,24 @@ class UkuPachaGraph:
             regs[i] = new_reg
         return regs
 
+    def parse_subsection(self, reg, graph_fields):
+        sub_section = {}
+        for i in graph_fields.keys():
+            alias = graph_fields[i]["alias"]
+            if "sub_section" in graph_fields[i].keys():
+                sub_section[alias] = graph_fields[i]["sub_section"]
+
+        new_reg = {}
+        for j in reg.keys():
+            if j in sub_section.keys():
+                if sub_section[j] in new_reg.keys():
+                    new_reg[sub_section[j]].append({j: reg[j]})
+                else:
+                    new_reg[sub_section[j]] = [{j: reg[j]}]
+            else:
+                new_reg[j] = reg[j]
+        return new_reg
+
     def run_graph(self, data, graph_schema, max_threads=None, debug=False):
         if max_threads is None:
             jobs = psutil.cpu_count()
@@ -183,7 +202,22 @@ class UkuPachaGraph:
             output.append(out)
         return output
 
-    def run(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False):
+    def request_graph2mongodb(self, mongodb_uri, db_name, data_row, tables, main_table, graph_fields):
+        reg = self.request_graph(data_row, tables, main_table)
+        raw = self.graph2json(graph_fields, reg)
+        out = self.parse_subsection(raw, graph_fields)
+        self.dbclient = MongoClient(mongodb_uri)
+        self.dbclient[db_name][graph_fields[main_table]["alias"]].insert_one(out)
+
+    def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None):
+        if max_threads is None:
+            jobs = psutil.cpu_count()
+        else:
+            jobs = max_threads
+        Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
+            mongodb_uri, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields) for i, row in data.iterrows())
+
+    def run2file(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False):
         regs = self.run_graph(data, graph_schema, max_threads, debug)
         if save_regs:
             with open(output_file+".regs.json", 'w') as fp:
@@ -194,7 +228,7 @@ class UkuPachaGraph:
             with open(output_file+".raws.json", 'w') as fp:
                 json.dump(raws, fp, cls=JsonEncoder, indent=4)
 
-        output = self.parse_subsection(raws, graph_fields)
+        output = self.parse_subsections(raws, graph_fields)
         with open(output_file, 'w') as fp:
             json.dump(output, fp, cls=JsonEncoder, indent=4)
-        print("Process finished, file {output_file} save")
+        print(f"Process finished, file {output_file} save")

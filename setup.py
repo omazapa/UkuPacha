@@ -84,7 +84,8 @@ def main():
             'numpy',
             'joblib>=0.14.1',
             'cx_Oracle',
-            'psutil'
+            'psutil',
+            'pymongo'
         ],
     )
 
