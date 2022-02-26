@@ -168,20 +168,14 @@ class UkuPachaGraph:
             regs[i] = new_reg
         return regs
 
-    def parse_subsection(self, reg, graph_fields):
-        sub_section = {}
-        for i in graph_fields.keys():
-            alias = graph_fields[i]["alias"]
-            if "sub_section" in graph_fields[i].keys():
-                sub_section[alias] = graph_fields[i]["sub_section"]
-
+    def parse_subsection(self, reg, sub_sections):
         new_reg = {}
         for j in reg.keys():
-            if j in sub_section.keys():
-                if sub_section[j] in new_reg.keys():
-                    new_reg[sub_section[j]].append({j: reg[j]})
+            if j in sub_sections.keys():
+                if sub_sections[j] in new_reg.keys():
+                    new_reg[sub_sections[j]].append({j: reg[j]})
                 else:
-                    new_reg[sub_section[j]] = [{j: reg[j]}]
+                    new_reg[sub_sections[j]] = [{j: reg[j]}]
             else:
                 new_reg[j] = reg[j]
         return new_reg
@@ -202,33 +196,47 @@ class UkuPachaGraph:
             output.append(out)
         return output
 
-    def request_graph2mongodb(self, mongodb_uri, db_name, data_row, tables, main_table, graph_fields):
-        reg = self.request_graph(data_row, tables, main_table)
-        raw = self.graph2json(graph_fields, reg)
-        out = self.parse_subsection(raw, graph_fields)
-        self.dbclient = MongoClient(mongodb_uri)
-        self.dbclient[db_name][graph_fields[main_table]["alias"]].insert_one(out)
+    def request_graph2mongodb(self, dbclient, db_name, data_row, tables, main_table, graph_fields, sub_sections):
+        try:
+            reg = self.request_graph(data_row, tables, main_table)
+            raw = self.graph2json(graph_fields, reg)
+            out = self.parse_subsection(raw, sub_sections)
+            dbclient[db_name][graph_fields[main_table]
+                              ["alias"]].insert_one(out)
+        except:
+            failed_collection = graph_fields[main_table]["alias"]+"_failed"
+            print(
+                f"Error parsing register, record added to the collection = {failed_collection} ")
+            dbclient[db_name][failed_collection].insert_one(data_row.to_dict())
 
     def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None):
+        sub_sections = {}
+        for i in graph_fields.keys():
+            alias = graph_fields[i]["alias"]
+            if "sub_section" in graph_fields[i].keys():
+                sub_sections[alias] = graph_fields[i]["sub_section"]
+        dbclient = MongoClient(mongodb_uri)
+
         if max_threads is None:
             jobs = psutil.cpu_count()
         else:
             jobs = max_threads
         Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
-            mongodb_uri, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields) for i, row in data.iterrows())
+            dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections) for i, row in data.iterrows())
+
+    def save_json(output_file, data):
+        with open(output_file+".regs.json", 'w') as fp:
+            json.dump(data, fp, cls=JsonEncoder, indent=4)
 
     def run2file(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False):
         regs = self.run_graph(data, graph_schema, max_threads, debug)
         if save_regs:
-            with open(output_file+".regs.json", 'w') as fp:
-                json.dump(regs, fp, cls=JsonEncoder, indent=4)
+            self.save_json(output_file+".regs.json", regs)
 
         raws = self.run_graph2json(regs, graph_fields)
         if save_raws:
-            with open(output_file+".raws.json", 'w') as fp:
-                json.dump(raws, fp, cls=JsonEncoder, indent=4)
+            self.save_json(output_file+".raws.json", raws)
 
         output = self.parse_subsections(raws, graph_fields)
-        with open(output_file, 'w') as fp:
-            json.dump(output, fp, cls=JsonEncoder, indent=4)
+        self.save_json(output_file, output)
         print(f"Process finished, file {output_file} save")
