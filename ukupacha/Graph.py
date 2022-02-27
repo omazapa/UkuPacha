@@ -132,8 +132,9 @@ class UkuPachaGraph:
                                     output.update(value)
                                 else:
                                     if section_exist(section, output.keys()):
-                                        output[section].append(
-                                            value[section][0])
+                                        if value:  # value !={}
+                                            output[section].append(
+                                                value[section][0])
                                     else:
                                         output[section] = [value[section][0]]
                             else:
@@ -224,7 +225,7 @@ class UkuPachaGraph:
         Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
             dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections) for i, row in data.iterrows())
 
-    def save_json(self,output_file, data):
+    def save_json(self, output_file, data):
         with open(output_file, 'w') as fp:
             json.dump(data, fp, cls=JsonEncoder, indent=4)
 

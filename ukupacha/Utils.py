@@ -2,6 +2,7 @@ import cx_Oracle
 import datetime
 import pandas as pd
 import json
+from pymongo import ObjectId
 
 
 class JsonEncoder(json.JSONEncoder):
@@ -22,7 +23,9 @@ class JsonEncoder(json.JSONEncoder):
             except ValueError:
                 return None
         if isinstance(o, pd.Series):
-            return o.to_json()
+            return o.to_dict()
+        if isinstance(o, ObjectId):
+            return str(o)
         return json.JSONEncoder.default(self, o)
 
 
