@@ -163,6 +163,31 @@ def parse_table(fields, table_name, data_row, remove_nulls=True):
             data[key] = value
     return data
 
+
+def replace_graph_db_field(graph, value_old, value_new):
+    """
+    Allows to replace the filed "DB": "__VALUE__" for "DB": "__NEW_VALUE__"
+    example for scienti:
+        "DB": "__CVLAC__" for "DB": "UDEA_CV"
+
+    Parameters:
+    ----------
+    graph:dict
+        dictionary with the model
+    value_old:str
+        current value for "DB" field
+    value_new:str
+        new value for "DB" field
+
+    Returns:
+    ----------
+        dict with the new graph with the field "DB" changed. 
+    """
+    graph_str = json.dumps(graph)
+    graph_str = graph_str.replace(
+        f'"DB": "{value_old}"', f'"DB": "{value_new}"')
+    return json.loads(graph_str)
+
 # def parse_table(fields,table_name,data_row,remove_nulls=True):
 #    data={}
 #    if table_exists(fields,table_name):
