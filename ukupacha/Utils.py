@@ -2,7 +2,7 @@ import cx_Oracle
 import datetime
 import pandas as pd
 import json
-from pymongo import ObjectId
+from bson import ObjectId
 
 
 class JsonEncoder(json.JSONEncoder):
