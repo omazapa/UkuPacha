@@ -136,7 +136,8 @@ class UkuPachaGraph:
                                             output[section].append(
                                                 value[section][0])
                                     else:
-                                        output[section] = [value[section][0]]
+                                        if value:
+                                            output[section] = [value[section][0]]
                             else:
                                 if section_exist("unkown", output.keys()):
                                     output["unkown"].append(value)
