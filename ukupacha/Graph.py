@@ -92,7 +92,7 @@ class UkuPachaGraph:
 
             return ndata
 
-    def graph2json(self, fields, regs, remove_nulls=True):
+    def graph2json(self, fields, regs, filter_function=None):
         output = {}
         if is_dict(regs):
             table = regs["table"]
@@ -102,17 +102,18 @@ class UkuPachaGraph:
                 if is_serie(i):
                     if table_exists(fields, table):
                         # this allows to jump relatioship tables that are not wanted
-                        value = parse_table(fields, table, i, remove_nulls)
+                        value = parse_table(fields, table, i, filter_function)
                         output.update(value)
                 if is_list(i):
                     last_dict = {}
                     for j in i:
                         if is_serie(j):
-                            value = parse_table(fields, table, j, remove_nulls)
+                            value = parse_table(
+                                fields, table, j, filter_function)
 
                         if is_dict(j):
                             last_dict = j
-                            out = self.graph2json(fields, j)
+                            out = self.graph2json(fields, j, filter_function)
                             value.update(out)
                     if table_exists(fields, table):
                         section = fields[table]["alias"]
@@ -137,7 +138,8 @@ class UkuPachaGraph:
                                                 value[section][0])
                                     else:
                                         if value:
-                                            output[section] = [value[section][0]]
+                                            output[section] = [
+                                                value[section][0]]
                             else:
                                 if section_exist("unkown", output.keys()):
                                     output["unkown"].append(value)
@@ -145,7 +147,7 @@ class UkuPachaGraph:
                                     output["unkown"] = [value]
         else:
             for reg in regs:
-                out = self.graph2json(fields, reg)
+                out = self.graph2json(fields, reg, filter_function)
                 output.update(out)
         return output
 
@@ -191,17 +193,17 @@ class UkuPachaGraph:
             row, graph_schema["GRAPH"], main_table=graph_schema["MAIN_TABLE"], debug=0) for i, row in data.iterrows())
         return regs
 
-    def run_graph2json(self, regs, graph_fields):
+    def run_graph2json(self, regs, graph_fields, filter_function=None):
         output = []
         for reg in regs:
-            out = self.graph2json(graph_fields, reg)
+            out = self.graph2json(graph_fields, reg, filter_function)
             output.append(out)
         return output
 
-    def request_graph2mongodb(self, dbclient, db_name, data_row, tables, main_table, graph_fields, sub_sections):
+    def request_graph2mongodb(self, dbclient, db_name, data_row, tables, main_table, graph_fields, sub_sections, filter_function=None):
         try:
-            reg = self.request_graph(data_row, tables, main_table)
-            raw = self.graph2json(graph_fields, reg)
+            reg = self.request_graph(data_row, tables, main_table,)
+            raw = self.graph2json(graph_fields, reg, filter_function)
             out = self.parse_subsection(raw, sub_sections)
             dbclient[db_name][graph_fields[main_table]
                               ["alias"]].insert_one(out)
@@ -211,7 +213,7 @@ class UkuPachaGraph:
                 f"Error parsing register, record added to the collection = {failed_collection} ")
             dbclient[db_name][failed_collection].insert_one(data_row.to_dict())
 
-    def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None):
+    def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None, filter_function=None):
         sub_sections = {}
         for i in graph_fields.keys():
             alias = graph_fields[i]["alias"]
@@ -224,18 +226,18 @@ class UkuPachaGraph:
         else:
             jobs = max_threads
         Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
-            dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections) for i, row in data.iterrows())
+            dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function) for i, row in data.iterrows())
 
     def save_json(self, output_file, data):
         with open(output_file, 'w') as fp:
             json.dump(data, fp, cls=JsonEncoder, indent=4)
 
-    def run2file(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False):
+    def run2file(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False, filter_function=None):
         regs = self.run_graph(data, graph_schema, max_threads, debug)
         if save_regs:
             self.save_json(output_file+".regs.json", regs)
 
-        raws = self.run_graph2json(regs, graph_fields)
+        raws = self.run_graph2json(regs, graph_fields, filter_function)
         if save_raws:
             self.save_json(output_file+".raws.json", raws)
 

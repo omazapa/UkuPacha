@@ -154,13 +154,16 @@ def table_exists(fields, table):
     return False
 
 
-def parse_table(fields, table_name, data_row, remove_nulls=True):
+def parse_table(fields, table_name, data_row, filters_function=None):
     data = {}
+    # WARNING HERE; AT THE MOMENT I AM NOT PARSING FIELDS WITH ALIAS
     if table_exists(fields, table_name):
-        if remove_nulls:
-            data_row.dropna(inplace=True)
-        for key, value in data_row.iteritems():
-            data[key] = value
+        if filters_function:
+            data_row = filters_function(table_name, data_row)
+        if is_dict(data_row):
+            data = data_row
+        else:
+            data = data_row.to_dict()
     return data
 
 
