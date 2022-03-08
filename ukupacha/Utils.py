@@ -1,3 +1,4 @@
+import sys
 import cx_Oracle
 import datetime
 import pandas as pd
@@ -31,9 +32,10 @@ class JsonEncoder(json.JSONEncoder):
 
 class Utils:
     def __init__(self, user="system", password="colavudea", dburi="localhost:1521"):
-        self.connection = cx_Oracle.connect(user=user,
-                                            password=password,
-                                            dsn=dburi)
+        self.connection = cx_Oracle.connect(user=self.user,
+                                            password=self.password,
+                                            dsn=self.dburi,
+                                            threaded=True)
 
     def request(self, query):
         """
@@ -48,7 +50,17 @@ class Utils:
         ----------
             dataframe with the results
         """
-        return pd.read_sql(query, con=self.connection)
+        # https://www.oracle.com/technical-resources/articles/embedded/vasiliev-python-concurrency.html
+        # alternavite to evalute if the code above doesnt work
+        # https://stackoverflow.com/questions/60887128/how-to-convert-sql-oracle-database-into-a-pandas-dataframe
+
+        try:
+            df = pd.read_sql(query, con=self.connection)
+        except cx_Oracle.Error as error:
+            print(error)
+            # if someting is failing with the connector is better to quit.
+            sys.exit(1)
+        return df
 
     def get_keys(self, table, ktype="P"):
         """
