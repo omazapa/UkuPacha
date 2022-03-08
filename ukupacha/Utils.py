@@ -32,9 +32,9 @@ class JsonEncoder(json.JSONEncoder):
 
 class Utils:
     def __init__(self, user="system", password="colavudea", dburi="localhost:1521"):
-        self.connection = cx_Oracle.connect(user=self.user,
-                                            password=self.password,
-                                            dsn=self.dburi,
+        self.connection = cx_Oracle.connect(user=user,
+                                            password=password,
+                                            dsn=dburi,
                                             threaded=True)
 
     def request(self, query):

@@ -85,7 +85,8 @@ def main():
             'joblib>=1.1.0',
             'cx_Oracle',
             'psutil',
-            'pymongo>=3.12.0'
+            'pymongo>=3.12.0',
+            'tqdm'
         ],
     )
 

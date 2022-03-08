@@ -4,6 +4,7 @@ import pandas as pd
 from ukupacha.Utils import Utils
 from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder
 from joblib import Parallel, delayed
+from tqdm import tqdm
 import psutil
 import json
 
@@ -189,8 +190,15 @@ class UkuPachaGraph:
             jobs = psutil.cpu_count()
         else:
             jobs = max_threads
-        regs = Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph)(
-            row, graph_schema["GRAPH"], main_table=graph_schema["MAIN_TABLE"], debug=0) for i, row in data.iterrows())
+        regs = []
+        if jobs == 1:
+            for i, row in tqdm(data.iterrows(), total=data.shape[0]):
+                reg = self.request_graph(
+                    row, graph_schema["GRAPH"], main_table=graph_schema["MAIN_TABLE"], debug=0)
+                regs.append(reg)
+        else:
+            regs = Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph)(
+                row, graph_schema["GRAPH"], main_table=graph_schema["MAIN_TABLE"], debug=0) for i, row in data.iterrows())
         return regs
 
     def run_graph2json(self, regs, graph_fields, filter_function=None):
@@ -225,8 +233,14 @@ class UkuPachaGraph:
             jobs = psutil.cpu_count()
         else:
             jobs = max_threads
-        Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
-            dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function) for i, row in data.iterrows())
+
+        if jobs == 1:
+            for i, row in tqdm(data.iterrows(), total=data.shape[0]):
+                self.request_graph2mongodb(
+                    dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function)
+        else:
+            Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
+                dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function) for i, row in data.iterrows())
 
     def save_json(self, output_file, data):
         with open(output_file, 'w') as fp:
