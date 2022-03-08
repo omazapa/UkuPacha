@@ -82,10 +82,10 @@ def main():
         install_requires=[
             'pandas',
             'numpy',
-            'joblib>=0.14.1',
+            'joblib>=1.1.0',
             'cx_Oracle',
             'psutil',
-            'pymongo'
+            'pymongo>=3.12.0'
         ],
     )
 
