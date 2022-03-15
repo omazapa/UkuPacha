@@ -1,5 +1,3 @@
-from tabnanny import check
-import cx_Oracle
 from pymongo import MongoClient
 import pandas as pd
 from ukupacha.Utils import Utils
