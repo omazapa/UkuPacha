@@ -1,8 +1,10 @@
+from tabnanny import check
 import cx_Oracle
 from pymongo import MongoClient
 import pandas as pd
 from ukupacha.Utils import Utils
 from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder
+from ukupacha.CheckPoint import UkuPachaCheckPoint
 from joblib import Parallel, delayed
 from tqdm import tqdm
 import psutil
@@ -208,27 +210,35 @@ class UkuPachaGraph:
             output.append(out)
         return output
 
-    def request_graph2mongodb(self, dbclient, db_name, data_row, tables, main_table, graph_fields, sub_sections, filter_function=None):
+    def request_graph2mongodb(self, dbclient, db_name, data_row, graph_schema, main_table, graph_fields, sub_sections, filter_function=None, checkpoint=None):
+        tables = graph_schema["GRAPH"]
         try:
-            reg = self.request_graph(data_row, tables, main_table,)
+            reg = self.request_graph(data_row, tables, main_table)
             raw = self.graph2json(graph_fields, reg, filter_function)
             out = self.parse_subsection(raw, sub_sections)
             dbclient[db_name][graph_fields[main_table]
                               ["alias"]].insert_one(out)
+            if checkpoint:
+                ckp_info = graph_schema["CHECKPOINT"]
+                reg = {}
+                for key in ckp_info["KEYS"]:
+                    reg[key] = data_row[key]
+                checkpoint.update(
+                    db_name, graph_fields[main_table]["alias"], reg)
+
         except:
             failed_collection = graph_fields[main_table]["alias"]+"_failed"
             print(
                 f"Error parsing register, record added to the collection = {failed_collection} ")
             dbclient[db_name][failed_collection].insert_one(data_row.to_dict())
 
-    def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None, filter_function=None):
+    def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None, filter_function=None, checkpoint: UkuPachaCheckPoint = None):
         sub_sections = {}
         for i in graph_fields.keys():
             alias = graph_fields[i]["alias"]
             if "sub_section" in graph_fields[i].keys():
                 sub_sections[alias] = graph_fields[i]["sub_section"]
         dbclient = MongoClient(mongodb_uri)
-
         if max_threads is None:
             jobs = psutil.cpu_count()
         else:
@@ -237,10 +247,10 @@ class UkuPachaGraph:
         if jobs == 1:
             for i, row in tqdm(data.iterrows(), total=data.shape[0]):
                 self.request_graph2mongodb(
-                    dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function)
+                    dbclient, db_name, row, graph_schema, graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function)
         else:
             Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
-                dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function) for i, row in data.iterrows())
+                dbclient, db_name, row, graph_schema, graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function, checkpoint) for i, row in data.iterrows())
 
     def save_json(self, output_file, data):
         with open(output_file, 'w') as fp:
