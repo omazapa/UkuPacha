@@ -1,12 +1,13 @@
 from pymongo import MongoClient
 import pandas as pd
 from ukupacha.Utils import Utils
-from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder
+from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder, oracle_codec_options
 from ukupacha.CheckPoint import UkuPachaCheckPoint
 from joblib import Parallel, delayed
 from tqdm import tqdm
 import psutil
 import json
+import sys
 
 
 class UkuPachaGraph:
@@ -214,8 +215,8 @@ class UkuPachaGraph:
             reg = self.request_graph(data_row, tables, main_table)
             raw = self.graph2json(graph_fields, reg, filter_function)
             out = self.parse_subsection(raw, sub_sections)
-            dbclient[db_name][graph_fields[main_table]
-                              ["alias"]].insert_one(out)
+            dbclient[db_name].get_collection(
+                graph_fields[main_table]["alias"], codec_options=oracle_codec_options).insert_one(out)
             if checkpoint:
                 ckp_info = graph_schema["CHECKPOINT"]
                 reg = {}
@@ -228,7 +229,9 @@ class UkuPachaGraph:
             failed_collection = graph_fields[main_table]["alias"]+"_failed"
             print(
                 f"Error parsing register, record added to the collection = {failed_collection} ")
-            dbclient[db_name][failed_collection].insert_one(data_row.to_dict())
+            print(sys.exc_info())
+            dbclient[db_name].get_collection(
+                failed_collection, codec_options=oracle_codec_options).insert_one(data_row.to_dict())
 
     def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None, filter_function=None, checkpoint: UkuPachaCheckPoint = None):
         sub_sections = {}

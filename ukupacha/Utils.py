@@ -4,6 +4,30 @@ import datetime
 import pandas as pd
 import json
 from bson import ObjectId
+from bson import BSONSTR
+from bson.codec_options import TypeCodec
+from bson.codec_options import TypeRegistry
+from bson.codec_options import CodecOptions
+
+
+class OracleLOBCodec(TypeCodec):
+    python_type = cx_Oracle.LOB    # the Python type acted upon by this type codec
+    bson_type = BSONSTR   # the BSON type acted upon by this type codec
+
+    def transform_python(self, value):
+        """Function that transforms a custom type value into a type
+        that BSON can encode."""
+        return ''.join(value.read())
+
+    def transform_bson(self, value):
+        """Function that transforms a vanilla BSON type value into our
+        custom type."""
+        return value
+
+
+oraclelob_codec = OracleLOBCodec()
+oracle_codec_options = CodecOptions(
+    type_registry=TypeRegistry([oraclelob_codec]))
 
 
 class JsonEncoder(json.JSONEncoder):
@@ -18,6 +42,12 @@ class JsonEncoder(json.JSONEncoder):
             return str(o)
         if isinstance(o, type(pd.NaT)):
             return None
+        if isinstance(o, cx_Oracle.LOB):
+            # https://cx-oracle.readthedocs.io/en/7.1/lob.html#LOB.read
+            # WARNING: es posible que no lea todo el contenido,
+            # de momento solo esta en pocos campos, no con contenidos muy largos.
+            # ex: tabla RE_PROYECTO_INSTITUCION campo NRO_VALOR
+            return ''.join(o.read())
         if isinstance(o, datetime.datetime):
             try:
                 return datetime.datetime.strftime(o, format='%Y%m%d')
@@ -123,7 +153,7 @@ class Utils:
         return data
 
     def request_register(self, db, keys, table):
-        query = f"select distinct * from {db}.{table} WHERE "
+        query = f"SELECT * FROM {db}.{table} WHERE "
         for key in keys:
             query += f" {key}='{keys[key]}' AND"
         query = query[0:-3]
