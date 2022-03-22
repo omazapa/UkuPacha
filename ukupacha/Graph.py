@@ -11,10 +11,29 @@ import sys
 
 
 class UkuPachaGraph:
+    """
+    Class to perform the relations in the database across mutiples tables, databases or table spaces.
+    """
+
     def __init__(self, user="system", password="colavudea", dburi="localhost:1521"):
+        """
+        Constructor to create an UkuPachaGraph Object
+        Parameters:
+        ----------
+        user:str
+            Oracle user, by default system, other users can be provided but be sure they have the right permissions in the DB.
+        password:str
+            Oracle pass for given user
+        dburi:str
+            Oracle db uri for connector, default "localhost:1521"
+
+        """
         self.utils = Utils(user=user, password=password, dburi=dburi)
 
     def request_graph(self, data_row, tables, main_table=None, debug=False):
+        """
+        Recursive algorithm to walk the graph, performing the requests.
+        """
         if debug:
             print("="*30)
         if not data_row.empty:
@@ -95,6 +114,9 @@ class UkuPachaGraph:
             return ndata
 
     def graph2json(self, fields, regs, filter_function=None):
+        """
+        Recursive algorithm to parse the graph to a json structure.
+        """
         output = {}
         if is_dict(regs):
             table = regs["table"]
@@ -154,6 +176,9 @@ class UkuPachaGraph:
         return output
 
     def parse_subsections(self, regs, graph_fields):
+        """
+        Method to parse subsections for multiple register gotten from the DB.
+        """
         sub_section = {}
         for i in graph_fields.keys():
             alias = graph_fields[i]["alias"]
@@ -175,6 +200,9 @@ class UkuPachaGraph:
         return regs
 
     def parse_subsection(self, reg, sub_sections):
+        """
+        Allows to parce the subsection for an specific register from the DB.
+        """
         new_reg = {}
         for j in reg.keys():
             if j in sub_sections.keys():
@@ -187,6 +215,11 @@ class UkuPachaGraph:
         return new_reg
 
     def run_graph(self, data, graph_schema, max_threads=None, debug=False):
+        """
+        Allows to perform the relations for multiple registers in parallel.
+        User this with careful, it's doesn´t support checkpoint and the regs are allocate in RAM memory,
+        then this cna be expensive.
+        """
         if max_threads is None:
             jobs = psutil.cpu_count()
         else:
@@ -203,6 +236,9 @@ class UkuPachaGraph:
         return regs
 
     def run_graph2json(self, regs, graph_fields, filter_function=None):
+        """
+        Allows to parse multiple registers from the graph to json and apply the filter function provided by the user.
+        """
         output = []
         for reg in regs:
             out = self.graph2json(graph_fields, reg, filter_function)
@@ -210,6 +246,15 @@ class UkuPachaGraph:
         return output
 
     def request_graph2mongodb(self, dbclient, db_name, data_row, graph_schema, main_table, graph_fields, sub_sections, filter_function=None, checkpoint=None):
+        """
+        method to extract the data from Oracle and save the results in MongoDB.
+        Allows to:
+        * Walk the graph
+        * Parse the graph to json
+        * Paser subsection to put some information in a specific keys ex: for scienti the field details.
+        * do checkpoints
+        * save failed registers in a collection_failed.
+        """
         tables = graph_schema["GRAPH"]
         try:
             reg = self.request_graph(data_row, tables, main_table)
@@ -234,6 +279,9 @@ class UkuPachaGraph:
                 failed_collection, codec_options=oracle_codec_options).insert_one(data_row.to_dict())
 
     def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None, filter_function=None, checkpoint: UkuPachaCheckPoint = None):
+        """
+        Method to run all in parallel
+        """
         sub_sections = {}
         for i in graph_fields.keys():
             alias = graph_fields[i]["alias"]
@@ -254,6 +302,9 @@ class UkuPachaGraph:
                 dbclient, db_name, row, graph_schema, graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function, checkpoint) for i, row in data.iterrows())
 
     def save_json(self, output_file, data):
+        """
+        Method to save data to json file.
+        """
         with open(output_file, 'w') as fp:
             json.dump(data, fp, cls=JsonEncoder, indent=4)
 
