@@ -11,6 +11,9 @@ from bson.codec_options import CodecOptions
 
 
 class OracleLOBCodec(TypeCodec):
+    """
+    Class to give support to mongodb to write objects cx_Oracle.LOB to bson strings. 
+    """
     python_type = cx_Oracle.LOB    # the Python type acted upon by this type codec
     bson_type = BSONSTR   # the BSON type acted upon by this type codec
 
@@ -25,6 +28,7 @@ class OracleLOBCodec(TypeCodec):
         return value
 
 
+# Creating codec and registry for mongodb
 oraclelob_codec = OracleLOBCodec()
 oracle_codec_options = CodecOptions(
     type_registry=TypeRegistry([oraclelob_codec]))
@@ -38,6 +42,9 @@ class JsonEncoder(json.JSONEncoder):
     """
 
     def default(self, o):
+        """
+        Method to encodec custom types.
+        """
         if isinstance(o, pd.Timestamp):
             return str(o)
         if isinstance(o, type(pd.NaT)):
@@ -61,7 +68,24 @@ class JsonEncoder(json.JSONEncoder):
 
 
 class Utils:
+    """
+    Utility class to handle some Oracle calls.
+    """
+
     def __init__(self, user="system", password="colavudea", dburi="localhost:1521"):
+        """
+        Constructor to create an Utils Object
+        Parameters:
+        ----------
+        user:str
+            Oracle user, by default system, other users can be provided but be sure they have the right permissions in the DB.
+        password:str
+            Oracle pass for given user
+        dburi:str
+            Oracle db uri for connector, default "localhost:1521"
+
+        """
+
         self.connection = cx_Oracle.connect(user=user,
                                             password=password,
                                             dsn=dburi,
@@ -98,8 +122,6 @@ class Utils:
 
         Parameters:
         ----------
-        db:str
-            database name ex: udea_cv
         table:str
             table on database ex: EN_PRODUCTO
         ktype:str
@@ -153,6 +175,22 @@ class Utils:
         return data
 
     def request_register(self, db, keys, table):
+        """
+        Returns a register for a given database(or table space), keys(Primary or foreing) and table from Oracle DB,
+
+        Parameters:
+        ----------
+        db:str
+            database for the table (or table space)
+        keys:dict
+            dictionary with primary or foreing keys and the values for the specific register.
+        table:str
+            table on database ex: EN_PRODUCTO
+
+        Returns:
+        ---------
+            pandas dataframe with the information
+        """
         query = f"SELECT * FROM {db}.{table} WHERE "
         for key in keys:
             query += f" {key}='{keys[key]}' AND"
@@ -162,27 +200,72 @@ class Utils:
 
 
 def is_dict(data):
-    tname = type(data).__name__
-    if tname == 'dict':
-        return True
-    return False
+    """
+    function to check if data is a dict
+    Parameters.
+    ----------
+    data:any
+        it's suppose to be a dict
+
+    Returns:
+    ---------
+        True if data is a dict otherwise False.
+    """
+    return isinstance(data, dict)
 
 
 def is_list(data):
-    tname = type(data).__name__
-    if tname == 'list':
-        return True
-    return False
+    """
+    function to check if data is a list
+    Parameters.
+    ----------
+    data:any
+        it's suppose to be a list
+
+    Returns:
+    ---------
+        True if data is a list otherwise False.
+    """
+    return isinstance(data, list)
 
 
 def is_serie(data):
-    tname = type(data).__name__
-    if tname == 'dict' or tname == 'list':
+    """
+    function to check if data is a pandas serie
+    Parameters.
+    ----------
+    data:any
+        it's suppose to be a pandas serie
+
+    Returns:
+    ---------
+        True if data is a pandas serie otherwise False.
+    """
+    if is_dict(data) or is_list(data):
         return False
     return True
 
 
 def section_exist(section, keys):
+    """
+    Section and subsections means alias in the graph fields,
+    ex: the section in the json for EN_RED is network
+
+    some tables doesn´t have sections in the json, for example RE_EVENTO_PROYECTO
+    because it is a relationship table.
+
+    Parameters.
+    ----------
+    section:str
+        name of the table
+    keys:list
+        keys of the graph fields
+
+    Returns:
+    ---------
+        True if section is found otherwise False.
+
+    """
     for i in list(keys):
         if section == i:
             return True
@@ -190,6 +273,20 @@ def section_exist(section, keys):
 
 
 def table_exists(fields, table):
+    """
+    Function to check if the table is in the graph field.
+
+    Parameters.
+    ----------
+    fields:dict
+        graph field with the map of aliases to create the json
+    table:str
+        name of the table
+
+    Returns:
+    ---------
+        True if table is found otherwise False.
+    """
     for i in list(fields.keys()):
         if table == i:
             return True
@@ -197,6 +294,11 @@ def table_exists(fields, table):
 
 
 def parse_table(fields, table_name, data_row, filters_function=None):
+    """
+    Apply the filter and returns a dict,
+    table fields to apply aliases to the table columns is not supported anymore,
+    the names of the colunms are mapped to the json directly
+    """
     data = {}
     # WARNING HERE; AT THE MOMENT I AM NOT PARSING FIELDS WITH ALIAS
     if table_exists(fields, table_name):
@@ -214,6 +316,8 @@ def replace_graph_db_field(graph, value_old, value_new):
     Allows to replace the filed "DB": "__VALUE__" for "DB": "__NEW_VALUE__"
     example for scienti:
         "DB": "__CVLAC__" for "DB": "UDEA_CV"
+        "DB": "__GRUPLAC__" for "DB": "UDEA_GR"
+        "DB": "__INSTITULAC__" for "DB": "UDEA_IN"
 
     Parameters:
     ----------
