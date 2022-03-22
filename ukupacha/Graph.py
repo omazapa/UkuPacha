@@ -1,18 +1,39 @@
-import cx_Oracle
 from pymongo import MongoClient
 import pandas as pd
 from ukupacha.Utils import Utils
-from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder
+from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder, oracle_codec_options
+from ukupacha.CheckPoint import UkuPachaCheckPoint
 from joblib import Parallel, delayed
+from tqdm import tqdm
 import psutil
 import json
+import sys
 
 
 class UkuPachaGraph:
+    """
+    Class to perform the relations in the database across mutiples tables, databases or table spaces.
+    """
+
     def __init__(self, user="system", password="colavudea", dburi="localhost:1521"):
+        """
+        Constructor to create an UkuPachaGraph Object
+        Parameters:
+        ----------
+        user:str
+            Oracle user, by default system, other users can be provided but be sure they have the right permissions in the DB.
+        password:str
+            Oracle pass for given user
+        dburi:str
+            Oracle db uri for connector, default "localhost:1521"
+
+        """
         self.utils = Utils(user=user, password=password, dburi=dburi)
 
     def request_graph(self, data_row, tables, main_table=None, debug=False):
+        """
+        Recursive algorithm to walk the graph, performing the requests.
+        """
         if debug:
             print("="*30)
         if not data_row.empty:
@@ -92,7 +113,10 @@ class UkuPachaGraph:
 
             return ndata
 
-    def graph2json(self, fields, regs, remove_nulls=True):
+    def graph2json(self, fields, regs, filter_function=None):
+        """
+        Recursive algorithm to parse the graph to a json structure.
+        """
         output = {}
         if is_dict(regs):
             table = regs["table"]
@@ -102,17 +126,18 @@ class UkuPachaGraph:
                 if is_serie(i):
                     if table_exists(fields, table):
                         # this allows to jump relatioship tables that are not wanted
-                        value = parse_table(fields, table, i, remove_nulls)
+                        value = parse_table(fields, table, i, filter_function)
                         output.update(value)
                 if is_list(i):
                     last_dict = {}
                     for j in i:
                         if is_serie(j):
-                            value = parse_table(fields, table, j, remove_nulls)
+                            value = parse_table(
+                                fields, table, j, filter_function)
 
                         if is_dict(j):
                             last_dict = j
-                            out = self.graph2json(fields, j)
+                            out = self.graph2json(fields, j, filter_function)
                             value.update(out)
                     if table_exists(fields, table):
                         section = fields[table]["alias"]
@@ -137,7 +162,8 @@ class UkuPachaGraph:
                                                 value[section][0])
                                     else:
                                         if value:
-                                            output[section] = [value[section][0]]
+                                            output[section] = [
+                                                value[section][0]]
                             else:
                                 if section_exist("unkown", output.keys()):
                                     output["unkown"].append(value)
@@ -145,11 +171,14 @@ class UkuPachaGraph:
                                     output["unkown"] = [value]
         else:
             for reg in regs:
-                out = self.graph2json(fields, reg)
+                out = self.graph2json(fields, reg, filter_function)
                 output.update(out)
         return output
 
     def parse_subsections(self, regs, graph_fields):
+        """
+        Method to parse subsections for multiple register gotten from the DB.
+        """
         sub_section = {}
         for i in graph_fields.keys():
             alias = graph_fields[i]["alias"]
@@ -171,6 +200,9 @@ class UkuPachaGraph:
         return regs
 
     def parse_subsection(self, reg, sub_sections):
+        """
+        Allows to parce the subsection for an specific register from the DB.
+        """
         new_reg = {}
         for j in reg.keys():
             if j in sub_sections.keys():
@@ -183,59 +215,105 @@ class UkuPachaGraph:
         return new_reg
 
     def run_graph(self, data, graph_schema, max_threads=None, debug=False):
+        """
+        Allows to perform the relations for multiple registers in parallel.
+        User this with careful, it's doesn´t support checkpoint and the regs are allocate in RAM memory,
+        then this cna be expensive.
+        """
         if max_threads is None:
             jobs = psutil.cpu_count()
         else:
             jobs = max_threads
-        regs = Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph)(
-            row, graph_schema["GRAPH"], main_table=graph_schema["MAIN_TABLE"], debug=0) for i, row in data.iterrows())
+        regs = []
+        if jobs == 1:
+            for i, row in tqdm(data.iterrows(), total=data.shape[0]):
+                reg = self.request_graph(
+                    row, graph_schema["GRAPH"], main_table=graph_schema["MAIN_TABLE"], debug=0)
+                regs.append(reg)
+        else:
+            regs = Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph)(
+                row, graph_schema["GRAPH"], main_table=graph_schema["MAIN_TABLE"], debug=0) for i, row in data.iterrows())
         return regs
 
-    def run_graph2json(self, regs, graph_fields):
+    def run_graph2json(self, regs, graph_fields, filter_function=None):
+        """
+        Allows to parse multiple registers from the graph to json and apply the filter function provided by the user.
+        """
         output = []
         for reg in regs:
-            out = self.graph2json(graph_fields, reg)
+            out = self.graph2json(graph_fields, reg, filter_function)
             output.append(out)
         return output
 
-    def request_graph2mongodb(self, dbclient, db_name, data_row, tables, main_table, graph_fields, sub_sections):
+    def request_graph2mongodb(self, dbclient, db_name, data_row, graph_schema, main_table, graph_fields, sub_sections, filter_function=None, checkpoint=None):
+        """
+        method to extract the data from Oracle and save the results in MongoDB.
+        Allows to:
+        * Walk the graph
+        * Parse the graph to json
+        * Paser subsection to put some information in a specific keys ex: for scienti the field details.
+        * do checkpoints
+        * save failed registers in a collection_failed.
+        """
+        tables = graph_schema["GRAPH"]
         try:
             reg = self.request_graph(data_row, tables, main_table)
-            raw = self.graph2json(graph_fields, reg)
+            raw = self.graph2json(graph_fields, reg, filter_function)
             out = self.parse_subsection(raw, sub_sections)
-            dbclient[db_name][graph_fields[main_table]
-                              ["alias"]].insert_one(out)
+            dbclient[db_name].get_collection(
+                graph_fields[main_table]["alias"], codec_options=oracle_codec_options).insert_one(out)
+            if checkpoint:
+                ckp_info = graph_schema["CHECKPOINT"]
+                reg = {}
+                for key in ckp_info["KEYS"]:
+                    reg[key] = data_row[key]
+                checkpoint.update(
+                    db_name, graph_fields[main_table]["alias"], reg)
+
         except:
             failed_collection = graph_fields[main_table]["alias"]+"_failed"
             print(
                 f"Error parsing register, record added to the collection = {failed_collection} ")
-            dbclient[db_name][failed_collection].insert_one(data_row.to_dict())
+            print(sys.exc_info())
+            dbclient[db_name].get_collection(
+                failed_collection, codec_options=oracle_codec_options).insert_one(data_row.to_dict())
 
-    def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None):
+    def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None, filter_function=None, checkpoint: UkuPachaCheckPoint = None):
+        """
+        Method to run all in parallel
+        """
         sub_sections = {}
         for i in graph_fields.keys():
             alias = graph_fields[i]["alias"]
             if "sub_section" in graph_fields[i].keys():
                 sub_sections[alias] = graph_fields[i]["sub_section"]
         dbclient = MongoClient(mongodb_uri)
-
         if max_threads is None:
             jobs = psutil.cpu_count()
         else:
             jobs = max_threads
-        Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
-            dbclient, db_name, row, graph_schema["GRAPH"], graph_schema["MAIN_TABLE"], graph_fields, sub_sections) for i, row in data.iterrows())
+
+        if jobs == 1:
+            for i, row in tqdm(data.iterrows(), total=data.shape[0]):
+                self.request_graph2mongodb(
+                    dbclient, db_name, row, graph_schema, graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function)
+        else:
+            Parallel(n_jobs=jobs, backend='threading', verbose=10)(delayed(self.request_graph2mongodb)(
+                dbclient, db_name, row, graph_schema, graph_schema["MAIN_TABLE"], graph_fields, sub_sections, filter_function, checkpoint) for i, row in data.iterrows())
 
     def save_json(self, output_file, data):
+        """
+        Method to save data to json file.
+        """
         with open(output_file, 'w') as fp:
             json.dump(data, fp, cls=JsonEncoder, indent=4)
 
-    def run2file(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False):
+    def run2file(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False, filter_function=None):
         regs = self.run_graph(data, graph_schema, max_threads, debug)
         if save_regs:
             self.save_json(output_file+".regs.json", regs)
 
-        raws = self.run_graph2json(regs, graph_fields)
+        raws = self.run_graph2json(regs, graph_fields, filter_function)
         if save_raws:
             self.save_json(output_file+".raws.json", raws)
 
