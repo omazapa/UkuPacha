@@ -180,7 +180,7 @@ class Utils:
         data = {}
         tables_names = self.get_tables(db)
         for table in tables_names:
-            query = f'SELECT * FROM {db}.{table}'
+            query = f"SELECT * FROM {db}.{table}"
             data[table] = self.request(query)
         return data
 
@@ -201,9 +201,9 @@ class Utils:
         ---------
             pandas dataframe with the information
         """
-        query = f'SELECT * FROM {db}.{table} WHERE '
+        query = f"SELECT * FROM {db}.{table} WHERE "
         for key in keys:
-            query += f' {key}="{keys[key]}" AND'
+            query += f" {key}='{keys[key]}' AND"
         query = query[0:-3]
         req = self.request(query)
         return req
