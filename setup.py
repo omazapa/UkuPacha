@@ -86,7 +86,8 @@ def main():
             'cx_Oracle',
             'psutil',
             'pymongo>=3.12.0',
-            'tqdm'
+            'tqdm',
+            'SQLAlchemy'
         ],
     )
 

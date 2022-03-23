@@ -8,6 +8,7 @@ from bson import BSONSTR
 from bson.codec_options import TypeCodec
 from bson.codec_options import TypeRegistry
 from bson.codec_options import CodecOptions
+from sqlalchemy import create_engine
 
 
 class OracleLOBCodec(TypeCodec):
@@ -91,6 +92,9 @@ class Utils:
                                             dsn=dburi,
                                             threaded=True)
 
+        def conn_factory(): return self.connection
+        self.engine = create_engine("oracle://", creator=conn_factory)
+
     def request(self, query):
         """
         Perform a request to the Oracle with a query.
@@ -109,7 +113,8 @@ class Utils:
         # https://stackoverflow.com/questions/60887128/how-to-convert-sql-oracle-database-into-a-pandas-dataframe
 
         try:
-            df = pd.read_sql(query, con=self.connection)
+            # df = pd.read_sql(query, con=self.connection)# this is deprecated, but it works fine
+            df = pd.read_sql(query, self.engine)
         except cx_Oracle.Error as error:
             print(error)
             # if someting is failing with the connector is better to quit.
