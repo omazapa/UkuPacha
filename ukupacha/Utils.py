@@ -8,6 +8,8 @@ from bson import BSONSTR
 from bson.codec_options import TypeCodec
 from bson.codec_options import TypeRegistry
 from bson.codec_options import CodecOptions
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool
 
 
 class OracleLOBCodec(TypeCodec):
@@ -86,10 +88,13 @@ class Utils:
 
         """
 
-        self.connection = cx_Oracle.connect(user=user,
-                                            password=password,
-                                            dsn=dburi,
-                                            threaded=True)
+        # https://blogs.oracle.com/opal/post/connecting-to-oracle-cloud-autonomous-database-through-sqlalchemy
+        # https://docs.sqlalchemy.org/en/14/dialects/oracle.html#module-sqlalchemy.dialects.oracle.cx_oracle
+        self.pool = cx_Oracle.SessionPool(user=user, password=password, dsn=dburi,
+                                          min=2, max=5, increment=1, threaded=True, encoding="UTF-8", nencoding="UTF-8")
+
+        self.engine = create_engine(
+            "oracle://", creator=self.pool.acquire, poolclass=NullPool, implicit_returning=False)
 
     def request(self, query):
         """
@@ -109,7 +114,10 @@ class Utils:
         # https://stackoverflow.com/questions/60887128/how-to-convert-sql-oracle-database-into-a-pandas-dataframe
 
         try:
-            df = pd.read_sql(query, con=self.connection)
+            # df = pd.read_sql(query, con=self.connection)# this is deprecated, but it works fine (colunms name are all UPPERCASE)
+            df = pd.read_sql(query, con=self.engine)
+            # https://docs.sqlalchemy.org/en/14/dialects/oracle.html#identifier-casings
+            df.columns = df.columns.str.upper()
         except cx_Oracle.Error as error:
             print(error)
             # if someting is failing with the connector is better to quit.
@@ -152,6 +160,8 @@ class Utils:
         """
         query = f"SELECT * FROM all_tables WHERE OWNER='{db}'"
         df = self.request(query)
+        # https://docs.sqlalchemy.org/en/14/dialects/oracle.html#identifier-casing
+        df.columns = df.columns.str.upper()
         return list(df["TABLE_NAME"].values)
 
     def get_db_data(self, db):
