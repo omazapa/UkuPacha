@@ -94,7 +94,7 @@ class Utils:
                                           min=2, max=5, increment=1, threaded=True, encoding="UTF-8", nencoding="UTF-8")
 
         self.engine = create_engine(
-            "oracle://", creator=self.pool.acquire, poolclass=NullPool, implicit_returning=False)
+            "oracle://", creator=self.pool.acquire, poolclass=NullPool, implicit_returning=False, encoding="utf8")
 
     def request(self, query):
         """
