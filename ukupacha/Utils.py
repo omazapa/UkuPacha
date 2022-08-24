@@ -68,6 +68,26 @@ class JsonEncoder(json.JSONEncoder):
             return str(o)
         return json.JSONEncoder.default(self, o)
 
+# https://stackoverflow.com/questions/61404287/year-is-out-of-range-cx-oracle-python
+
+
+def DateTimeConverter(value):
+    """
+    Return the date as string
+    """
+    return value
+    # if value.startswith('9999'):
+    #    return None
+    # return datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+
+
+def OutputHandler(cursor, name, defaulttype, length, precision, scale):
+    """
+    Callback to parse cursor
+    """
+    if defaulttype == cx_Oracle.DATETIME:
+        return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=DateTimeConverter)
+
 
 class Utils:
     """
@@ -115,9 +135,19 @@ class Utils:
 
         try:
             # df = pd.read_sql(query, con=self.connection)# this is deprecated, but it works fine (colunms name are all UPPERCASE)
-            df = pd.read_sql(query, con=self.engine)
+            # df = pd.read_sql(query, con=self.engine)
             # https://docs.sqlalchemy.org/en/14/dialects/oracle.html#identifier-casings
-            df.columns = df.columns.str.upper()
+            # df.columns = df.columns.str.upper()
+            connection = self.pool.acquire()
+            connection.outputtypehandler = OutputHandler
+            cur = connection.cursor()
+            cur.execute(
+                "ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS' NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SS.FF'")
+            cur.execute(query)
+            rows = cur.fetchall()
+            columns = [row[0] for row in cur.description]
+            connection.close()
+            df = pd.DataFrame(rows, columns=columns, dtype='object')
         except cx_Oracle.Error as error:
             print(error)
             # if someting is failing with the connector is better to quit.
