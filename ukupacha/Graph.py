@@ -279,10 +279,10 @@ class UkuPachaGraph:
             print(error_info[0])
             print(error_info[1])
             print(traceback.format_exc())
-            failed_register={"register":data_row.to_dict()}
-            failed_register["type"]=str(error_info[0])
-            failed_register["value"]=str(error_info[1])
-            failed_register["traceback"]=traceback.format_exc()
+            failed_register = {"register": data_row.to_dict()}
+            failed_register["type"] = str(error_info[0])
+            failed_register["value"] = str(error_info[1])
+            failed_register["traceback"] = traceback.format_exc()
             dbclient[db_name].get_collection(
                 failed_collection, codec_options=oracle_codec_options).insert_one(failed_register)
 

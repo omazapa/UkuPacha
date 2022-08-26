@@ -76,9 +76,13 @@ def DateTimeConverter(value):
     Return the date as string
     """
     return value
-    # if value.startswith('9999'):
-    #    return None
-    # return datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
+
+
+def LOBConverter(value):
+    """
+    Return the LOB object as string
+    """
+    return ''.join(value.read())
 
 
 def OutputHandler(cursor, name, defaulttype, length, precision, scale):
@@ -87,6 +91,8 @@ def OutputHandler(cursor, name, defaulttype, length, precision, scale):
     """
     if defaulttype == cx_Oracle.DATETIME:
         return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=DateTimeConverter)
+    if defaulttype == cx_Oracle.LOB:
+        return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=LOBConverter)
 
 
 class Utils:
