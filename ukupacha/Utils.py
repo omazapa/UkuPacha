@@ -91,7 +91,10 @@ def OutputHandler(cursor, name, defaulttype, length, precision, scale):
     """
     if defaulttype == cx_Oracle.DATETIME:
         return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=DateTimeConverter)
-    if defaulttype == cx_Oracle.LOB:
+    # https://cx-oracle.readthedocs.io/en/latest/user_guide/lob_data.html#fetching-lobs-as-strings-and-bytes
+    if defaulttype == cx_Oracle.DB_TYPE_CLOB:
+        return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=LOBConverter)
+    if defaulttype == cx_Oracle.DB_TYPE_BLOB:
         return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=LOBConverter)
 
 
