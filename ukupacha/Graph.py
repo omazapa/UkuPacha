@@ -4,6 +4,7 @@ from ukupacha.Utils import Utils
 from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder, oracle_codec_options
 from ukupacha.CheckPoint import UkuPachaCheckPoint
 from joblib import Parallel, delayed
+import traceback
 from tqdm import tqdm
 import psutil
 import json
@@ -270,13 +271,20 @@ class UkuPachaGraph:
                 checkpoint.update(
                     db_name, graph_fields[main_table]["alias"], reg)
 
-        except:
+        except Exception as e:
             failed_collection = graph_fields[main_table]["alias"]+"_failed"
             print(
                 f"Error parsing register, record added to the collection = {failed_collection} ")
-            print(sys.exc_info())
+            error_info = sys.exc_info()
+            print(error_info[0])
+            print(error_info[1])
+            print(traceback.format_exc())
+            failed_register={"register":data_row.to_dict()}
+            failed_register["type"]=str(error_info[0])
+            failed_register["value"]=str(error_info[1])
+            failed_register["traceback"]=traceback.format_exc()
             dbclient[db_name].get_collection(
-                failed_collection, codec_options=oracle_codec_options).insert_one(data_row.to_dict())
+                failed_collection, codec_options=oracle_codec_options).insert_one(failed_register)
 
     def run2mongodb(self, data, graph_schema, graph_fields, db_name, mongodb_uri="mongodb://localhost:27017/", max_threads=None, filter_function=None, checkpoint: UkuPachaCheckPoint = None):
         """
