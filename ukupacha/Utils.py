@@ -78,9 +78,16 @@ def DateTimeConverter(value):
     return value
 
 
-def LOBConverter(value):
+def CLOBConverter(value):
     """
-    Return the LOB object as string
+    Return the CLOB object as string
+    """
+    return value
+
+
+def BLOBConverter(value):
+    """
+    Return the BLOB object as string
     """
     return ''.join(value.read())
 
@@ -93,9 +100,9 @@ def OutputHandler(cursor, name, defaulttype, length, precision, scale):
         return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=DateTimeConverter)
     # https://cx-oracle.readthedocs.io/en/latest/user_guide/lob_data.html#fetching-lobs-as-strings-and-bytes
     if defaulttype == cx_Oracle.DB_TYPE_CLOB:
-        return cursor.var(cx_Oracle.LONG_STRING, arraysize=cursor.arraysize, outconverter=LOBConverter)
+        return cursor.var(cx_Oracle.LONG_STRING, arraysize=cursor.arraysize, outconverter=CLOBConverter)
     if defaulttype == cx_Oracle.DB_TYPE_BLOB:
-        return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=LOBConverter)
+        return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=BLOBConverter)
 
 
 class Utils:
