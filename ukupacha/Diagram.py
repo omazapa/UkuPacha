@@ -49,7 +49,7 @@ def diag2file(diag, filename, fmt):
     fmt:str
         format of the file, supported "SVG", "PNG" and "PDF"
     """
-    tree = parser.parse_string(out)
+    tree = parser.parse_string(diag)
     diagram = builder.ScreenNodeBuilder.build(tree)
     draw = drawer.DiagramDraw(fmt, diagram, filename=filename)
     draw.draw()
