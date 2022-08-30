@@ -26,7 +26,7 @@ def graph2blockdiag(regs, pdb):
 
 def model2diag(model: dict):
     """
-    Given the model dict, takes the grap and the initial db to
+    Given the model dict, takes the graph and the initial db to
     call grap2blockdiag
     """
     graph = model["GRAPH"]
@@ -38,7 +38,7 @@ def model2diag(model: dict):
 
 def diag2file(diag, filename, fmt):
     """
-    Function to save the diag in a file.
+    Function to save the diagram in a file.
 
     Parameters
     ------------
