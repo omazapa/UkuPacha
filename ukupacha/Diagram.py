@@ -6,21 +6,17 @@ def graph2blockdiag(regs, pdb):
     """
     Recursive algorithm to parse the graph to a blockdiag structure.
     """
+    reg = regs[0]
+    parent = list(reg.keys())[0]
+    regs = reg.get(parent)
+    if regs is None:
+        return f"'{parent}\n{pdb}';\n"
     output = ""
-    if is_dict(regs):
-        parent = list(regs.keys())[0]
-        if regs[parent] == None:
-            output = f"'{parent}\n{pdb}';\n"
-        else:
-            for i in regs[parent]:
-                db = i["DB"]
-                sub_regs = i["TABLES"]
-                out = graph2blockdiag(sub_regs, db)
-                output += f" '{parent}\n{pdb}' -> {out}"
-    else:
-        for reg in regs:
-            out = graph2blockdiag(reg, pdb)
-            output += out
+    for sub_reg in regs:
+        db = sub_reg["DB"]
+        for node in sub_reg["TABLES"]:
+            out = graph2blockdiag2([node], db)
+            output += f" '{parent}\n{pdb}' -> {out}"
     return output
 
 
