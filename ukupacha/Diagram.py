@@ -15,7 +15,7 @@ def graph2blockdiag(regs, pdb):
     for sub_reg in regs:
         db = sub_reg["DB"]
         for node in sub_reg["TABLES"]:
-            out = graph2blockdiag2([node], db)
+            out = graph2blockdiag([node], db)
             output += f" '{parent}\n{pdb}' -> {out}"
     return output
 
