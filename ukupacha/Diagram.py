@@ -21,6 +21,7 @@ def graph2blockdiag(regs, pdb):
     """
     Recursive algorithm to parse the graph to a blockdiag structure.
     """
+    global colors
     reg = regs[0]
     parent = list(reg.keys())[0]
     regs = reg.get(parent)
