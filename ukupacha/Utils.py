@@ -76,9 +76,6 @@ def DateTimeConverter(value):
     Return the date as string
     """
     return value
-    # if value.startswith('9999'):
-    #    return None
-    # return datetime.datetime.strptime(value, '%Y-%m-%d %H:%M:%S')
 
 
 def OutputHandler(cursor, name, defaulttype, length, precision, scale):
@@ -87,6 +84,11 @@ def OutputHandler(cursor, name, defaulttype, length, precision, scale):
     """
     if defaulttype == cx_Oracle.DATETIME:
         return cursor.var(cx_Oracle.STRING, arraysize=cursor.arraysize, outconverter=DateTimeConverter)
+    # https://cx-oracle.readthedocs.io/en/latest/user_guide/lob_data.html#fetching-lobs-as-strings-and-bytes
+    if defaulttype == cx_Oracle.DB_TYPE_CLOB:
+        return cursor.var(cx_Oracle.DB_TYPE_LONG, arraysize=cursor.arraysize)
+    if defaulttype == cx_Oracle.DB_TYPE_BLOB:
+        return cursor.var(cx_Oracle.DB_TYPE_LONG_RAW, arraysize=cursor.arraysize)
 
 
 class Utils:
@@ -146,8 +148,13 @@ class Utils:
             cur.execute(query)
             rows = cur.fetchall()
             columns = [row[0] for row in cur.description]
+            scale = [row[5] for row in cur.description]
             connection.close()
             df = pd.DataFrame(rows, columns=columns, dtype='object')
+            for idx, scale in enumerate(scale):
+                if scale is not None:
+                    if scale == 0 and df[columns[idx]].dtype=='object':
+                        df[columns[idx]] = df[columns[idx]].astype('Int64')
         except cx_Oracle.Error as error:
             print(error)
             # if someting is failing with the connector is better to quit.
