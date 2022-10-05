@@ -11,6 +11,8 @@ import json
 import sys
 
 
+
+
 class UkuPachaGraph:
     """
     Class to perform the relations in the database across mutiples tables, databases or table spaces.
@@ -45,12 +47,14 @@ class UkuPachaGraph:
                 ndata.append({"table": main_table, "data": [data_row]})
 
             for table_dict in tables:
-                table = list(table_dict.keys())[0]
+                table_full = list(table_dict.keys())[0]
+                table = table_full.split("/")[0]
+
                 if debug:
                     print(f"table = {table}")
                     print(list(table_dict.keys()))
-                if table_dict[table] is not None:
-                    for table_relations in table_dict[table]:
+                if table_dict[table_full] is not None:
+                    for table_relations in table_dict[table_full]:
                         db = table_relations["DB"]
                         keys = {}
                         for key in table_relations["KEYS"]:
@@ -85,7 +89,8 @@ class UkuPachaGraph:
                         if debug:
                             print(f"len subtables = {len(sub_tables_dict)}")
                         for sub_table_dict in sub_tables_dict:
-                            sub_table = list(sub_table_dict.keys())[0]
+                            sub_table_full = list(sub_table_dict.keys())[0]
+                            sub_table=sub_table_full.split("/")[0]
                             if debug:
                                 print(f"sub_table = {sub_table}")
 
@@ -99,7 +104,7 @@ class UkuPachaGraph:
                                     # sub_table_data.append({"table":sub_table,"data":req_data})
                                     sub_table_data.append(req_data)
                                 ndata.append(
-                                    {"table": sub_table, "data": sub_table_data, "keys": keys})
+                                    {"table": sub_table_full, "data": sub_table_data, "keys": keys})
 
                             except:
                                 if debug:
