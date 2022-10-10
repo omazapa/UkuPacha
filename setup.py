@@ -87,7 +87,8 @@ def main():
             'psutil',
             'pymongo>=3.12.0',
             'tqdm',
-            'SQLAlchemy'
+            'SQLAlchemy',
+            'pygraphviz'
         ],
     )
 
