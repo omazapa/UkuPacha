@@ -65,7 +65,7 @@ class UkuPachaGraph:
                                 alias = tmp_keys[1]
                             try:
                                 value = data_row[key]
-                                if not pd.isna(value):
+                                if value is not None:
                                     keys[alias] = value
                                 else:
                                     if debug:
