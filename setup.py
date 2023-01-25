@@ -88,6 +88,7 @@ def main():
             'pymongo>=3.12.0',
             'tqdm',
             'SQLAlchemy',
+            'pygraphviz'
             'blockdiag==2.0.1'
         ],
     )
