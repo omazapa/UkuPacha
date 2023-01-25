@@ -22,8 +22,13 @@ class UkuPachaCheckPoint:
         data = self.utils.request(query)
         data["status"] = np.zeros(data.shape[0], dtype=int)
         self.client[mongo_db][f"{mongo_collection}_checkpoint"].drop()
-        self.client[mongo_db][f"{mongo_collection}_checkpoint"].insert_many(
-            data.to_dict('records'))
+        values = data.to_dict('records')
+        if len(values) > 0:
+            self.client[mongo_db][f"{mongo_collection}_checkpoint"].insert_many(
+                values)
+        else:
+            print(
+                f"=== WARNING: checkpoint not created for {mongo_collection}, not elements found.")
 
     def exists(self, mongo_db: str, mongo_collection: str):
         ckp_col = f"{mongo_collection}_checkpoint"
