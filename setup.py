@@ -68,7 +68,7 @@ def main():
 
         # Details
         url="https://github.com/colav/UkuPacha",
-        #scripts=['bin/ukupacha_sql2json', 'bin/ukupacha_sql2mongodb'],
+        # scripts=['bin/ukupacha_sql2json', 'bin/ukupacha_sql2mongodb'],
         #
         license="BSD",
 
