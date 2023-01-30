@@ -89,7 +89,7 @@ def main():
             'tqdm',
             'SQLAlchemy',
             'pygraphviz',
-            'blockdiag==2.0.1'
+            'blockdiag>=3.0.0'
         ],
     )
 
