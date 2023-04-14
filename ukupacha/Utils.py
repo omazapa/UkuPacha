@@ -113,7 +113,7 @@ class Utils:
         # https://blogs.oracle.com/opal/post/connecting-to-oracle-cloud-autonomous-database-through-sqlalchemy
         # https://docs.sqlalchemy.org/en/14/dialects/oracle.html#module-sqlalchemy.dialects.oracle.cx_oracle
         self.pool = cx_Oracle.SessionPool(user=user, password=password, dsn=dburi,
-                                          min=2, max=5, increment=1, threaded=True, encoding="UTF-8", nencoding="UTF-8")
+                                          min=2, max=5, increment=1, threaded=True, nencoding="UTF-8")
 
         self.engine = create_engine(
             "oracle://", creator=self.pool.acquire, poolclass=NullPool, implicit_returning=False)
