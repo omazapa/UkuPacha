@@ -3,7 +3,6 @@ from ukupacha.Utils import Utils
 from joblib import Parallel, delayed
 import pandas as pd
 import numpy as np
-import time
 
 
 class UkuPachaCheckPoint:
@@ -16,8 +15,8 @@ class UkuPachaCheckPoint:
         # Exmplae query="select COD_RH,COD_PRODUCTO from UDEA_CV.EN_PRODUCTO"
         query = "select "
         for key in keys:
-            query += key+","
-        query = query[0:-1]
+            query += key + ","
+        query = query[0: -1]
         query += f" from {oracle_db}.{main_table}"
         data = self.utils.request(query)
         data["status"] = np.zeros(data.shape[0], dtype=int)
@@ -38,7 +37,7 @@ class UkuPachaCheckPoint:
         self.client[mongo_db][f"{mongo_collection}_checkpoint"].drop()
 
     def update(self, mongo_db: str, mongo_collection: str, keys: dict):
-        #print(mongo_db, mongo_collection,keys)
+        # print(mongo_db, mongo_collection,keys)
         self.client[mongo_db][f"{mongo_collection}_checkpoint"].update_one(
             keys, {"$set": {"status": 1}})
 
@@ -52,7 +51,7 @@ class UkuPachaCheckPoint:
 
     def get_data_chunk(self, oracle_db: str, main_table: str, mongo_db: str, mongo_collection: str, chunk: int, chunk_size: int, ckpdata):
         query = f"select * from {oracle_db}.{main_table} WHERE "
-        last_chunk = chunk+chunk_size
+        last_chunk = chunk + chunk_size
         if last_chunk > len(ckpdata):
             last_chunk = chunk + last_chunk - len(ckpdata)
         for row in ckpdata[chunk:last_chunk]:
@@ -81,7 +80,7 @@ class UkuPachaCheckPoint:
         chunks = []
         for chunk in range(0, len(ckpdata), chunk_size):
             query = f"select * from {oracle_db}.{main_table} WHERE "
-            last_chunk = chunk+chunk_size
+            last_chunk = chunk + chunk_size
             if last_chunk > len(ckpdata):
                 last_chunk = chunk + last_chunk - len(ckpdata)
             for row in ckpdata[chunk:last_chunk]:

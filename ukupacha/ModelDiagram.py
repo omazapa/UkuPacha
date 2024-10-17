@@ -1,12 +1,13 @@
 import pygraphviz as pgv
 
+
 class ModelDiagram:
     """
     Class which can be used to make a diagram of dictionary models.
     The diagrams are made using pygraphviz https://pygraphviz.github.io/documentation/stable/ and
     the DOT language https://graphviz.org/doc/info/lang.html
     """
-    
+
     def __init__(self, utils):
         """
         Constructor to create a ModelDiagram Object
@@ -17,11 +18,12 @@ class ModelDiagram:
         """
         self.graph_section_args = {"font_color": "gray66", "font_sz": "18", "water_mark": "CoLaV: https://github.com/colav",
                                    "node_sep": "0.5", "rank_dir": "LR", "rank_sep": "10.0"}
-        self.node_section_args = {"font_sz": "12", "label": "\\N", "shape": "plaintext"}
+        self.node_section_args = {"font_sz": "12",
+                                  "label": "\\N", "shape": "plaintext"}
         self.utils = utils
         self.colors = [
             '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
-           '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']  # matplotlib TABLEAU_COLORS
+            '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']  # matplotlib TABLEAU_COLORS
         # https://www.color-hex.com/color-palette/1017697
         self.colors += ['#56ba5a', '#0cc6b8', "#fdc0c7", "#8b9df2"]
         # https://www.color-hex.com/color-palette/1017695
@@ -48,7 +50,7 @@ class ModelDiagram:
             '#2E8B57', '#A0522D', '#C0C0C0', '#87CEEB', '#6A5ACD', '#708090', '#00FF7F',
             '#4682B4', '#D2B48C', '#008080', '#D8BFD8', '#FF6347', '#40E0D0', '#EE82EE',
             '#FFFF00', '#9ACD32']
-        
+
     def get_table_desc(self, table_name):
         """
         Perform a request to get column names and their data datatype.
@@ -63,10 +65,10 @@ class ModelDiagram:
         query = f"SELECT  column_name, data_type \
         FROM all_tab_columns where table_name='{table_name}'"
         return self.utils.request(query)
-    
+
     def make_graph_metadata_section(self, font_color, font_sz, water_mark, node_sep, rank_dir, rank_sep):
         """
-        Create a metadata section which has information that will be used to make the graph 
+        Create a metadata section which has information that will be used to make the graph
         https://graphviz.org/docs/graph/
         Parameters:
         ----------
@@ -87,20 +89,20 @@ class ModelDiagram:
             string with DOT language format.
         """
         next_line = "\n"
-        space = " "*4
+        space = " " * 4
         graph_section = f"{space}graph [{next_line}"
-        graph_section += f"{space*2}fontcolor={font_color},{next_line}"
-        graph_section += f"{space*2}fontsize={font_sz},{next_line}"
-        graph_section += f"{space*2}label=\"{water_mark}\",{next_line}"
-        graph_section += f"{space*2}nodesep={node_sep},{next_line}"
-        graph_section += f"{space*2}rankdir={rank_dir},{next_line}"
-        graph_section += f"{space*2}ranksep={rank_sep}{next_line}"
-        graph_section += f"{space}];{next_line*2}"
+        graph_section += f"{space * 2}fontcolor={font_color},{next_line}"
+        graph_section += f"{space * 2}fontsize={font_sz},{next_line}"
+        graph_section += f"{space * 2}label=\"{water_mark}\",{next_line}"
+        graph_section += f"{space * 2}nodesep={node_sep},{next_line}"
+        graph_section += f"{space * 2}rankdir={rank_dir},{next_line}"
+        graph_section += f"{space * 2}ranksep={rank_sep}{next_line}"
+        graph_section += f"{space}];{next_line * 2}"
         return graph_section
-    
+
     def make_node_section(self, font_sz, label, shape):
         """
-        Create a metadata section which has information that will be used to make the graph 
+        Create a metadata section which has information that will be used to make the graph
         https://graphviz.org/docs/nodes/
         Parameters:
         ----------
@@ -115,17 +117,17 @@ class ModelDiagram:
             string with DOT language format.
         """
         next_line = "\n"
-        space = " "*4
+        space = " " * 4
         node_section = f"{space}node [{next_line}"
-        node_section += f"{space*2}fontsize={font_sz},{next_line}"
-        node_section += f"{space*2}label=\"{label}\",{next_line}"
-        node_section += f"{space*2}shape={shape},{next_line}"
-        node_section += f"{space}];{next_line*2}"
+        node_section += f"{space * 2}fontsize={font_sz},{next_line}"
+        node_section += f"{space * 2}label=\"{label}\",{next_line}"
+        node_section += f"{space * 2}shape={shape},{next_line}"
+        node_section += f"{space}];{next_line * 2}"
         return node_section
 
     def get_table_descs(self, graph):
         """
-        Traverse the graph and get the table description of each node 
+        Traverse the graph and get the table description of each node
         Parameters:
         ----------
         graph:dict
@@ -139,14 +141,15 @@ class ModelDiagram:
         node_name_no_alias = node_name.split("/")[0]
         sub_graphs = parent_node.get(node_name)
         if sub_graphs is None:
-            table_desc = self.get_table_desc(node_name_no_alias).values.tolist()
+            table_desc = self.get_table_desc(
+                node_name_no_alias).values.tolist()
             return {node_name: table_desc}
         table_descs = {}
         for sub_graph in sub_graphs:
             for node in sub_graph["TABLES"]:
                 table_desc = self.get_table_descs([node])
                 for key in table_desc:
-                    if not key in list(table_descs.keys()):
+                    if key not in list(table_descs.keys()):
                         table_descs[key] = table_desc[key]
         table_descs[node_name] = self.get_table_desc(node_name).values.tolist()
         return table_descs
@@ -167,24 +170,24 @@ class ModelDiagram:
         sub_graphs = parent_node.get(parent_node_name)
         if sub_graphs is None:
             return
-        if not parent_node_name in list(key_attributes.keys()):
+        if parent_node_name not in list(key_attributes.keys()):
             key_attributes[parent_node_name] = set()
         for sub_graph in sub_graphs:
-            db = sub_graph["DB"]
+            # db = sub_graph["DB"]
             parent_key_attributes = list(map(lambda key: key[:key.find('/')] if '/' in key else key,
                                              sub_graph["KEYS"]))
             for parent_key_attribute in parent_key_attributes:
                 key_attributes[parent_node_name].add(parent_key_attribute)
-            node_key_attributes = list(map(lambda key: key[key.find('/')+1:] if '/' in key else key,
+            node_key_attributes = list(map(lambda key: key[key.find('/') + 1:] if '/' in key else key,
                                            sub_graph["KEYS"]))
             for node in sub_graph["TABLES"]:
                 node_name = list(node.keys())[0]
-                if not node_name in list(key_attributes.keys()):
+                if node_name not in list(key_attributes.keys()):
                     key_attributes[node_name] = set()
                 for node_key_attribute in node_key_attributes:
                     key_attributes[node_name].add(node_key_attribute)
                 self.get_key_attributes([node], key_attributes)
-    
+
     def make_table(self, db, name, table_desc, key_attributes):
         """
         Make a string containing DOT language instructions to create a table.
@@ -203,28 +206,28 @@ class ModelDiagram:
             string containing DOT language instructions to create a table.
         """
         next_line = "\n"
-        space = " "*4
+        space = " " * 4
         ID = f"{db}_{name}"
         table = f"{space}\"{ID}\" [{next_line}"
-        table += f"{space*2}label={next_line}"
-        table += f"{space*2}<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">{next_line}"
-        table += f"{space*3}<tr>{next_line}"
-        table += f"{space*4}<td>{next_line}"
-        table += f"{space*5}<b>{ID}</b>{next_line}"
-        table += f"{space*4}</td>{next_line}"
-        table += f"{space*3}</tr>{next_line}"
+        table += f"{space * 2}label={next_line}"
+        table += f"{space * 2}<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\">{next_line}"
+        table += f"{space * 3}<tr>{next_line}"
+        table += f"{space * 4}<td>{next_line}"
+        table += f"{space * 5}<b>{ID}</b>{next_line}"
+        table += f"{space * 4}</td>{next_line}"
+        table += f"{space * 3}</tr>{next_line}"
         for attribute, db_type in table_desc:
-            table += f"{space*3}<tr>"
+            table += f"{space * 3}<tr>"
             if attribute in key_attributes:
                 table += f"<td align=\"center\" port=\"{attribute}\">"
             else:
-                table += f"<td align=\"center\">"
+                table += "<td align=\"center\">"
             table += f"{attribute} :: {db_type}</td>{next_line}"
-            table += f"{space*3}</tr>{next_line}"
-        table += f"{space*2}</table>>{next_line}"
-        table += f"{space}];{next_line*2}"
+            table += f"{space * 3}</tr>{next_line}"
+        table += f"{space * 2}</table>>{next_line}"
+        table += f"{space}];{next_line * 2}"
         return table
-    
+
     def make_table_section(self, graph, pdb, table_descs, key_attributes, visited_nodes):
         """
         Traverse the graph and make a section where the tables are defined.
@@ -247,7 +250,7 @@ class ModelDiagram:
         """
         parent_node = graph[0]
         parent_node_name = list(parent_node.keys())[0]
-        if not parent_node_name in visited_nodes:
+        if parent_node_name not in visited_nodes:
             visited_nodes.append(parent_node_name)
         else:
             return ""
@@ -259,7 +262,8 @@ class ModelDiagram:
         for sub_graph in sub_graphs:
             db = sub_graph["DB"]
             for node in sub_graph["TABLES"]:
-                table_section += self.make_table_section([node], db, table_descs, key_attributes, visited_nodes)
+                table_section += self.make_table_section(
+                    [node], db, table_descs, key_attributes, visited_nodes)
         table_section += self.make_table(pdb, parent_node_name, table_descs[parent_node_name],
                                          key_attributes[parent_node_name])
         return table_section
@@ -285,7 +289,7 @@ class ModelDiagram:
         if sub_graphs is None:
             return ""
         next_line = "\n"
-        space = " "*4
+        space = " " * 4
         accum_graph_section = ""
         graph_section = ""
         for sub_graph in sub_graphs:
@@ -296,19 +300,24 @@ class ModelDiagram:
                 if not colors:
                     colors = self.colors.copy()
                 node_name = list(node.keys())[0]
-                parent_keys = list(map(lambda key: key[:key.find('/')] if '/' in key else key, keys))
-                node_keys = list(map(lambda key: key[key.find('/')+1:] if '/' in key else key, keys))
+                # parent_keys = list(
+                #    map(lambda key: key[:key.find('/')] if '/' in key else key, keys))
+                # node_keys = list(
+                #    map(lambda key: key[key.find('/')+1:] if '/' in key else key, keys))
                 for key in keys:
-                    parent_attribute = key[:key.find("/")] if '/' in key else key
-                    node_attribute = key[key.find("/")+1:] if '/' in key else key
+                    parent_attribute = key[:key.find(
+                        "/")] if '/' in key else key
+                    node_attribute = key[key.find(
+                        "/") + 1:] if '/' in key else key
                     graph_section += f"{space}\"{pdb}_{parent_node_name}\":{parent_attribute}:e"
                     graph_section += " -> "
                     graph_section += f"\"{db}_{node_name}\":{node_attribute}:w "
-                    graph_section  += f"[arrowhead=nonenormal color=\"{color}\"];{next_line}"
-                accum_graph_section += self.make_graph_section([node], db, colors)
+                    graph_section += f"[arrowhead=nonenormal color=\"{color}\"];{next_line}"
+                accum_graph_section += self.make_graph_section(
+                    [node], db, colors)
         accum_graph_section = graph_section + accum_graph_section
         return accum_graph_section
-            
+
     def make_dot_program(self, model, diagram_name):
         """
         Create a dot program from a model.
@@ -323,10 +332,11 @@ class ModelDiagram:
             string containing DOT language instructions to create a digraph.
         """
         next_line = "\n"
-        space = " "*4
-        dot_program = f"digraph \"{diagram_name}\" "+"{" 
-        dot_program += f"{next_line*2}"
-        dot_program += self.make_graph_metadata_section(**self.graph_section_args)
+        space = " " * 4
+        dot_program = f"digraph \"{diagram_name}\" " + "{"
+        dot_program += f"{next_line * 2}"
+        dot_program += self.make_graph_metadata_section(
+            **self.graph_section_args)
         dot_program += self.make_node_section(**self.node_section_args)
         graph = model["GRAPH"]
         db = model["CHECKPOINT"]["DB"]
@@ -334,7 +344,8 @@ class ModelDiagram:
         key_attributes = {}
         self.get_key_attributes(graph, key_attributes)
         dot_program += f"{space}//Table Section{next_line*2}"
-        dot_program += self.make_table_section(graph, db, table_descs, key_attributes, [])
+        dot_program += self.make_table_section(graph,
+                                               db, table_descs, key_attributes, [])
         dot_program += f"{space}//End Table Section{next_line*2}"
         colors = self.colors.copy()
         dot_program += f"{space}//Graph Section{next_line*2}"
@@ -342,7 +353,7 @@ class ModelDiagram:
         dot_program += f"{space}//End Graph Section{next_line*2}"
         dot_program += "}"
         return dot_program
-    
+
     def make_diagram(self, model, name, extension="svg"):
         """
         Create a diagram from a dot program using pygraphviz.

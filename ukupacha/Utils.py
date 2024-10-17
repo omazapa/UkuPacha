@@ -14,7 +14,7 @@ from sqlalchemy.pool import NullPool
 
 class OracleLOBCodec(TypeCodec):
     """
-    Class to give support to mongodb to write objects cx_Oracle.LOB to bson strings. 
+    Class to give support to mongodb to write objects cx_Oracle.LOB to bson strings.
     """
     python_type = cx_Oracle.LOB    # the Python type acted upon by this type codec
     bson_type = BSONSTR   # the BSON type acted upon by this type codec
@@ -113,10 +113,10 @@ class Utils:
         # https://blogs.oracle.com/opal/post/connecting-to-oracle-cloud-autonomous-database-through-sqlalchemy
         # https://docs.sqlalchemy.org/en/14/dialects/oracle.html#module-sqlalchemy.dialects.oracle.cx_oracle
         self.pool = cx_Oracle.SessionPool(user=user, password=password, dsn=dburi,
-                                          min=2, max=5, increment=1, threaded=True, encoding="UTF-8", nencoding="UTF-8")
+                                          min=2, max=5, increment=1, threaded=True, nencoding="UTF-8")
 
         self.engine = create_engine(
-            "oracle://", creator=self.pool.acquire, poolclass=NullPool, implicit_returning=False, encoding="utf8")
+            "oracle://", creator=self.pool.acquire, poolclass=NullPool, implicit_returning=False)
 
     def request(self, query):
         """
@@ -188,7 +188,7 @@ class Utils:
 
         Returns:
         ----------
-            list of tables names 
+            list of tables names
         """
         query = f"SELECT * FROM all_tables WHERE OWNER='{db}'"
         df = self.request(query)
@@ -372,7 +372,7 @@ def replace_graph_db_field(graph, value_old, value_new):
 
     Returns:
     ----------
-        dict with the new graph with the field "DB" changed. 
+        dict with the new graph with the field "DB" changed.
     """
     graph_str = json.dumps(graph)
     graph_str = graph_str.replace(

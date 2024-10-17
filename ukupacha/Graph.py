@@ -1,5 +1,4 @@
 from pymongo import MongoClient
-import pandas as pd
 from ukupacha.Utils import Utils
 from ukupacha.Utils import is_dict, is_list, is_serie, section_exist, table_exists, parse_table, JsonEncoder, oracle_codec_options
 from ukupacha.CheckPoint import UkuPachaCheckPoint
@@ -9,8 +8,6 @@ from tqdm import tqdm
 import psutil
 import json
 import sys
-
-
 
 
 class UkuPachaGraph:
@@ -38,7 +35,7 @@ class UkuPachaGraph:
         Recursive algorithm to walk the graph, performing the requests.
         """
         if debug:
-            print("="*30)
+            print("=" * 30)
         if not data_row.empty:
             ndata = []
             if main_table is None:
@@ -72,25 +69,26 @@ class UkuPachaGraph:
                                         print(f"None value for key = {key}")
                                         print(data_row)
                                     keys = None
-                            except:
+                            except Exception as e:
                                 if debug:
-                                    print("-"*30)
+                                    print("-" * 30)
+                                    print(e)
                                     print(f"key = {key}")
                                     print(data_row)
                                 keys = None
                                 continue
                         # con malas llaves no se ppuede hacer el request
                         # y no se puede continuar en profundidad
-                        if keys == None:
+                        if keys is None:
                             if debug:
-                                print("/"*30)
+                                print("/" * 30)
                             continue
                         sub_tables_dict = table_relations["TABLES"]
                         if debug:
                             print(f"len subtables = {len(sub_tables_dict)}")
                         for sub_table_dict in sub_tables_dict:
                             sub_table_full = list(sub_table_dict.keys())[0]
-                            sub_table=sub_table_full.split("/")[0]
+                            sub_table = sub_table_full.split("/")[0]
                             if debug:
                                 print(f"sub_table = {sub_table}")
 
@@ -106,16 +104,17 @@ class UkuPachaGraph:
                                 ndata.append(
                                     {"table": sub_table_full, "data": sub_table_data, "keys": keys})
 
-                            except:
+                            except Exception as e:
                                 if debug:
+                                    print(e)
                                     print(data_row)
                                     print(
                                         f"db = {db} keys={keys} sub_table={sub_table}")
-                                    print("|"*30)
+                                    print("|" * 30)
                                 continue
                 else:
                     if debug:
-                        print("*"*30)
+                        print("*" * 30)
 
             return ndata
 
@@ -277,10 +276,11 @@ class UkuPachaGraph:
                     db_name, graph_fields[main_table]["alias"], reg)
 
         except Exception as e:
-            failed_collection = graph_fields[main_table]["alias"]+"_failed"
+            failed_collection = graph_fields[main_table]["alias"] + "_failed"
             print(
                 f"Error parsing register, record added to the collection = {failed_collection} ")
             error_info = sys.exc_info()
+            print(e)
             print(error_info[0])
             print(error_info[1])
             print(traceback.format_exc())
@@ -324,11 +324,11 @@ class UkuPachaGraph:
     def run2file(self, output_file, data, graph_schema, graph_fields, max_threads=None, debug=False, save_regs=False, save_raws=False, filter_function=None):
         regs = self.run_graph(data, graph_schema, max_threads, debug)
         if save_regs:
-            self.save_json(output_file+".regs.json", regs)
+            self.save_json(output_file + ".regs.json", regs)
 
         raws = self.run_graph2json(regs, graph_fields, filter_function)
         if save_raws:
-            self.save_json(output_file+".raws.json", raws)
+            self.save_json(output_file + ".raws.json", raws)
 
         output = self.parse_subsections(raws, graph_fields)
         self.save_json(output_file, output)

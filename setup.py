@@ -52,44 +52,35 @@ def main():
     setup(
         # Application name:
         name="UkuPacha",
-
         # Version number (initial):
-        version=get_version('ukupacha/_version.py'),
-
+        version=get_version("ukupacha/_version.py"),
         # Application author details:
         author="Colav",
         author_email="colav@udea.edu.co",
-
         # Packages
-        packages=find_packages(exclude=['tests']),
-
+        packages=find_packages(exclude=["tests"]),
         # Include additional files into the package
         include_package_data=True,
-
         # Details
         url="https://github.com/colav/UkuPacha",
-        #scripts=['bin/ukupacha_sql2json', 'bin/ukupacha_sql2mongodb'],
+        # scripts=['bin/ukupacha_sql2json', 'bin/ukupacha_sql2mongodb'],
         #
         license="BSD",
-
         description="Package to convert SQL queries given a relational model in dictionaries into JSON data",
-
         long_description=open("README.md").read(),
-
         long_description_content_type="text/markdown",
-
         # Dependent packages (distributions)
         install_requires=[
-            'pandas',
-            'numpy',
-            'joblib>=1.1.0',
-            'cx_Oracle',
-            'psutil',
-            'pymongo>=3.12.0',
-            'tqdm',
-            'SQLAlchemy',
-            'pygraphviz'
-            'blockdiag==2.0.1'
+            "pandas",
+            "numpy",
+            "joblib>=1.1.0",
+            "cx_Oracle",
+            "psutil",
+            "pymongo>=3.12.0",
+            "tqdm",
+            "SQLAlchemy==1.4.54",
+            "pygraphviz",
+            "blockdiag>=3.0.0",
         ],
     )
 

@@ -1,4 +1,3 @@
-from ukupacha.Utils import is_dict
 from blockdiag import parser, builder, drawer
 
 _colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b',
@@ -29,7 +28,7 @@ def graph2blockdiag(regs, pdb):
         if len(colors) == 0:
             colors = list(_colors[:])  # deep copy to start over
         color = colors.pop()
-        return f"'{parent}\n{pdb}[color = \"{color}\"]';\n"
+        return f"'{parent}\n{pdb}' [color = \"{color}\",thick];\n"
     output = ""
     for sub_reg in regs:
         db = sub_reg["DB"]
@@ -47,7 +46,7 @@ def model2diag(model: dict):
     graph = model["GRAPH"]
     db = model["CHECKPOINT"]["DB"]
     out = graph2blockdiag(graph, db)
-    output = "diagram { "+out+" }"
+    output = "diagram { " + out + " }"
     return output
 
 
